@@ -55,3 +55,6 @@ e2e/*.db-*
 
 # drizzle migrations are committed in /drizzle (keep), generated audio is not
 public/audio/
+
+.vercel
+.env*
