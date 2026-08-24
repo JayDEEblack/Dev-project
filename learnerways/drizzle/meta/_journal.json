@@ -15,6 +15,13 @@
       "when": 1787180782671,
       "tag": "0001_wet_adam_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787563706742,
+      "tag": "0002_add_audio_data",
+      "breakpoints": true
     }
   ]
 }

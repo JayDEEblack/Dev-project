@@ -1,8 +1,6 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile, unlink } from "node:fs/promises";
-import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/db";
 import {
@@ -140,21 +138,6 @@ export async function deleteMaterialAction(
     const mat = await ownedMaterial(materialId, user.id);
     if (!mat) throw new Error("Material not found.");
 
-    const [audio] = await db
-      .select()
-      .from(audioFiles)
-      .where(eq(audioFiles.materialId, mat.id))
-      .limit(1);
-    if (audio) {
-      const audioPath = path.join(
-        process.cwd(),
-        "public",
-        "audio",
-        audio.fileName
-      );
-      await unlink(audioPath).catch(() => {});
-    }
-
     await db.delete(materials).where(eq(materials.id, mat.id));
     return { ok: true };
   } catch (err) {
@@ -209,16 +192,14 @@ export async function generateAudioAction(
 
     const truncated = mat.content.length > MAX_CONTENT_CHARS;
     const audio = await generateSpeech(mat.content);
-    const dir = path.join(process.cwd(), "public", "audio");
-    await mkdir(dir, { recursive: true });
     const fileName = `${mat.id}.mp3`;
-    await writeFile(path.join(dir, fileName), audio);
 
     await db.delete(audioFiles).where(eq(audioFiles.materialId, mat.id));
     await db.insert(audioFiles).values({
       id: randomUUID(),
       materialId: mat.id,
       fileName,
+      data: Buffer.from(audio),
       createdAt: new Date(),
     });
 

@@ -42,7 +42,7 @@ export default function AudioPanel({
           <p className="mb-3 text-sm font-medium text-zinc-500 dark:text-zinc-400">
             Listen while you study
           </p>
-          <audio controls className="w-full" src={`/audio/${fileName}`}>
+          <audio controls className="w-full" src={`/api/audio/${materialId}`}>
             Your browser does not support the audio element.
           </audio>
         </div>

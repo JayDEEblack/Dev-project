@@ -2,6 +2,7 @@ import {
   sqliteTable,
   text,
   integer,
+  blob,
 } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
@@ -91,6 +92,7 @@ export const audioFiles = sqliteTable("audio_file", {
     .notNull()
     .references(() => materials.id, { onDelete: "cascade" }),
   fileName: text("file_name").notNull(),
+  data: blob("data", { mode: "buffer" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
