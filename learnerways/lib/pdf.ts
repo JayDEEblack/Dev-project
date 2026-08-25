@@ -1,4 +1,5 @@
 import "server-only";
+import "./pdf-polyfills";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";

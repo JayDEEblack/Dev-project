@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+
+export const maxDuration = 60;
+
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/db";
 import {

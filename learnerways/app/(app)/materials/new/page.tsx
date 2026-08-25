@@ -2,6 +2,8 @@ import Link from "next/link";
 import NewMaterialForm from "@/components/NewMaterialForm";
 import { requireUser } from "@/lib/session";
 
+export const maxDuration = 60;
+
 export default async function NewMaterialPage() {
   await requireUser();
 

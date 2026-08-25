@@ -58,3 +58,6 @@ public/audio/
 
 .vercel
 .env*
+
+auth
+auth-wal

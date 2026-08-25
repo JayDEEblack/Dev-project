@@ -9,7 +9,22 @@ const useOpenRouter = Boolean(process.env.OPENROUTER_API_KEY);
 
 export const CHAT_MODEL =
   process.env.OPENAI_MODEL ??
-  (useOpenRouter ? "openrouter/free" : "gpt-4o-mini");
+  (useOpenRouter ? "minimax/minimax-m3:free" : "gpt-4o-mini");
+
+const MODEL_CHAIN = Array.from(
+  new Set(
+    [
+      CHAT_MODEL,
+      ...(useOpenRouter
+        ? [
+            "z-ai/glm-5.2:free",
+            "google/gemma-4-31b-it:free",
+            "openrouter/free",
+          ]
+        : []),
+    ].filter(Boolean)
+  )
+);
 
 export const TTS_VOICE = process.env.TTS_VOICE || "en-US-JennyNeural";
 
@@ -44,25 +59,39 @@ function contentToString(
     .join("");
 }
 
-async function chatText(
+async function chatCompletion(
   system: string,
   user: string,
-  json = false
+  useJsonMode: boolean,
+  model: string
 ): Promise<string> {
   const completion = await client.chat.completions.create({
-    model: CHAT_MODEL,
-    response_format: json ? { type: "json_object" } : undefined,
+    model,
+    max_tokens: 2000,
+    response_format: useJsonMode ? { type: "json_object" } : undefined,
     messages: [
       { role: "system", content: system },
       { role: "user", content: trimInput(user) },
     ],
-    temperature: json ? 0 : undefined,
+    temperature: useJsonMode ? 0 : undefined,
   });
   return contentToString(completion.choices[0]?.message?.content);
 }
 
+async function chatText(
+  system: string,
+  user: string
+): Promise<string> {
+  for (const model of MODEL_CHAIN) {
+    const text = await chatCompletion(system, user, false, model);
+    if (text.trim() !== "") return text;
+  }
+  throw new Error("The AI returned an empty response. Try again.");
+}
+
 function extractJson<T>(raw: string): T {
   const cleaned = raw
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/```\s*$/, "")
     .trim();
@@ -82,13 +111,42 @@ async function chatJson<T>(
   system: string,
   user: string
 ): Promise<T> {
-  return extractJson<T>(
-    await chatText(
-      system +
-        "\nRespond with valid strict JSON only. No markdown code fences, no commentary, no extra keys.",
-      user,
-      true
-    )
+  const instruction =
+    system +
+    "\nRespond with valid strict JSON only. No markdown code fences, no commentary, no extra keys.";
+
+  let lastError: Error | null = null;
+  for (const model of MODEL_CHAIN) {
+    // First attempt uses the API's JSON mode; a fallback attempt drops it
+    // because some free models mishandle response_format.
+    for (const useJsonMode of [true, false]) {
+      let raw = "";
+      try {
+        raw = await chatCompletion(
+          useJsonMode
+            ? instruction
+            : instruction + "\nDo not wrap the JSON in code fences.",
+          user,
+          useJsonMode,
+          model
+        );
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        continue;
+      }
+      if (raw.trim() === "") {
+        lastError = new Error("The AI returned an empty response.");
+        continue;
+      }
+      try {
+        return extractJson<T>(raw);
+      } catch {
+        lastError = new Error("The AI returned invalid JSON. Try again.");
+      }
+    }
+  }
+  throw (
+    lastError ?? new Error("The AI failed to respond. Try again.")
   );
 }
 
@@ -120,6 +178,9 @@ export async function generateQuiz(
     text
   );
 
+  if (!Array.isArray(result.questions)) {
+    throw new Error("The AI returned invalid JSON. Try again.");
+  }
   return result.questions.slice(0, count);
 }
 
@@ -137,6 +198,9 @@ export async function generateFlashcards(
     text
   );
 
+  if (!Array.isArray(result.cards)) {
+    throw new Error("The AI returned invalid JSON. Try again.");
+  }
   return result.cards.slice(0, count);
 }
 
