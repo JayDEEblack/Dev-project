@@ -26,8 +26,9 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         OPENAI_BASE_URL: "http://localhost:8788/v1",
-        DB_PATH: "./e2e/test.db",
         GENERATION_COOLDOWN_MS: "200",
+        BETTER_AUTH_URL: "http://localhost:3000",
+        NEXT_PUBLIC_APP_URL: "http://localhost:3000",
       },
     },
   ],
